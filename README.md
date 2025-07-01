@@ -39,7 +39,11 @@ This script is ideal for MDR analysts or threat responders who want a **faster w
 
 ## 📸 Screenshot
 
-![screenshot-placeholder](https://your-screenshot-url-if-hosted.png)
+![git1](https://github.com/user-attachments/assets/b39f91b5-8da3-4e7b-acde-069516231f5a)
+
+![git2](https://github.com/user-attachments/assets/ce155121-0d94-4f08-a0b5-67cca1ef124d)
+
+![git3](https://github.com/user-attachments/assets/bc6845ae-5d5a-4584-85a5-d32c2271c101)
 
 ---
 
