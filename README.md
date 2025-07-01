@@ -1,4 +1,4 @@
-# Dupe Checker – Darkbytes Pro UI
+# Dupe Checker – Darkbytes Pro 
 
 ## 🔍 Overview
 
