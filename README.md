@@ -2,7 +2,7 @@
 
 ## 🔍 Overview
 
-**Dupe Checker** is a Tampermonkey script purpose-built for the **Sophos MDR DarkBytes portal**. It allows analysts to instantly search through case notes using keywords and identify potential duplicate cases by **Case ID**. This version includes a complete **professional UI ** with improved usability, dark style aesthetics, and handy features like minimize/restore functionality — all without modifying any core request or data logic.
+**Dupe Checker** is a Tampermonkey script purpose-built for the **Sophos MDR DarkBytes portal**. It allows analysts to instantly search through case notes using keywords and identify potential duplicate cases by **Case ID**. This version includes a complete **professional UI** with improved usability, dark style aesthetics, and handy features like minimize/restore functionality — all without modifying any core request or data logic.
 
 ---
 
