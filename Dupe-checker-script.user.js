@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Dupe Checker Darkbytes Pro
+// @name         Dupe Checker Darkbytes Pro 
 // @namespace    127.0.0.1
-// @version      3.3
-// @description  Final polished version: Minimize + Restore button, bottom-right default, case ID links, smooth drag, pro UI – no refresh needed anymore for restore panel!
+// @version      4.0
+// @description  Dual keyword search with priority results, UI
 // @author       SK, Rohith
 // @match        https://portal.mdr.sophos.com/soc/cases/*
 // @grant        none
@@ -38,7 +38,7 @@
         return xAccessToken && xIdToken ? { xAccessToken, xIdToken } : null;
     }
 
-    function sendRequestWithCustomerId(tokens, customerId, keyword, monthsBack = 6) {
+    function sendRequestWithCustomerId(tokens, customerId, keyword1, keyword2, monthsBack = 6) {
         const to_epoch = Math.floor(Date.now() / 1000);
         const from_epoch = to_epoch - (60 * 60 * 24 * 30 * monthsBack);
         const url = `https://prod-us-east-2.accessor.darkbytes.io/ui/soc/cases?customer_id=${customerId}&startTime=${from_epoch}&endTime=${to_epoch}`;
@@ -59,7 +59,7 @@
                 if (!res.ok) throw new Error(`Error: ${res.status}`);
                 return res.json();
             })
-            .then(data => printAllNotesAndRegionId(data, keyword))
+            .then(data => renderDualKeywordResults(data, keyword1, keyword2))
             .catch(err => {
                 resultContainer.innerHTML = `<div style="color: red;">${err.message}</div>`;
             });
@@ -148,21 +148,14 @@
         });
 
         closeBtn.onclick = () => (container.style.display = 'none');
-
-        let minimized = false;
         minimizeBtn.onclick = () => {
-            minimized = true;
             container.querySelectorAll('input, select, .result, button:not(.close-btn):not(.min-btn)').forEach(el => el.style.display = 'none');
             restoreBtn.style.display = 'inline-block';
             minimizeBtn.style.display = 'none';
         };
-
         restoreBtn.onclick = () => {
-            minimized = false;
             container.querySelectorAll('input, select, .result, button').forEach(el => {
-                if (!el.classList.contains('close-btn') && !el.classList.contains('min-btn')) {
-                    el.style.display = '';
-                }
+                if (!el.classList.contains('close-btn') && !el.classList.contains('min-btn')) el.style.display = '';
             });
             restoreBtn.style.display = 'none';
             minimizeBtn.style.display = 'inline-block';
@@ -175,20 +168,29 @@
         header.appendChild(buttonGroup);
         container.appendChild(header);
 
-        const keywordInput = document.createElement('input');
-        keywordInput.type = 'text';
-        keywordInput.placeholder = 'Enter keyword to search in notes';
-        Object.assign(keywordInput.style, {
-            width: '100%',
-            padding: '10px',
-            borderRadius: '6px',
-            border: '1px solid #30363d',
-            backgroundColor: '#21262d',
-            color: '#c9d1d9',
-            marginBottom: '12px',
+        const keywordInput1 = document.createElement('input');
+        keywordInput1.placeholder = '🔑 Keyword 1 (e.g. src IP)';
+        const keywordInput2 = document.createElement('input');
+        keywordInput2.placeholder = '🔑 Keyword 2 (e.g. dst IP)';
+        [keywordInput1, keywordInput2].forEach(input => {
+            Object.assign(input.style, {
+                width: '100%',
+                padding: '10px',
+                borderRadius: '6px',
+                border: '1px solid #30363d',
+                backgroundColor: '#21262d',
+                color: '#c9d1d9',
+                marginBottom: '10px',
+            });
         });
 
         const selectRange = document.createElement('select');
+        ['1', '3', '6'].forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = `${val} Month${val === '1' ? '' : 's'}`;
+            selectRange.appendChild(opt);
+        });
         Object.assign(selectRange.style, {
             width: '100%',
             padding: '10px',
@@ -198,14 +200,6 @@
             color: '#c9d1d9',
             marginBottom: '12px',
         });
-
-        ['1', '3', '6'].forEach(val => {
-            const opt = document.createElement('option');
-            opt.value = val;
-            opt.textContent = `${val} Month${val === '1' ? '' : 's'}`;
-            selectRange.appendChild(opt);
-        });
-        selectRange.value = '6';
 
         const searchButton = document.createElement('button');
         searchButton.textContent = '🛡️ Search';
@@ -249,7 +243,8 @@
             border: '1px solid #30363d'
         });
 
-        container.appendChild(keywordInput);
+        container.appendChild(keywordInput1);
+        container.appendChild(keywordInput2);
         container.appendChild(selectRange);
         container.appendChild(searchButton);
         container.appendChild(toggleButton);
@@ -257,18 +252,15 @@
         document.body.appendChild(container);
 
         searchButton.onclick = () => {
-            const keyword = keywordInput.value.trim();
+            const kw1 = keywordInput1.value.trim();
+            const kw2 = keywordInput2.value.trim();
             const monthsBack = parseInt(selectRange.value);
             const tokens = getTokens();
             const customerId = getCustomerIdFromUrl();
-            if (keyword && tokens && customerId) {
+            if ((kw1 || kw2) && tokens && customerId) {
                 searchButton.style.backgroundColor = '#005a9e';
-                searchButton.style.boxShadow = 'inset 0 0 10px #00e0ff';
-                setTimeout(() => {
-                    searchButton.style.backgroundColor = '#007acc';
-                    searchButton.style.boxShadow = '';
-                }, 150);
-                sendRequestWithCustomerId(tokens, customerId, keyword, monthsBack);
+                sendRequestWithCustomerId(tokens, customerId, kw1, kw2, monthsBack);
+                setTimeout(() => searchButton.style.backgroundColor = '#007acc', 150);
             }
         };
 
@@ -299,43 +291,58 @@
         };
     }
 
-    function printAllNotesAndRegionId(data, keyword = '') {
+    function renderDualKeywordResults(data, k1, k2) {
         const resultContainer = document.querySelector('#dupeCheckerContainer .result');
         resultContainer.innerHTML = '';
-        const sanitized = keyword.replace(/[^0-9a-z]/gi, '').toLowerCase();
-        let count = 0;
+        if (!Array.isArray(data.data)) return;
 
-        if (Array.isArray(data.data)) {
-            data.data.forEach(item => {
-                if (item.notes && item.region_coded_id) {
-                    const note = item.notes.replace(/[^0-9a-z]/gi, '').toLowerCase();
-                    if (note.includes(sanitized)) {
-                        const div = document.createElement('div');
-                        div.style.marginBottom = '12px';
-                        div.style.paddingBottom = '10px';
-                        div.style.borderBottom = '1px solid #30363d';
-                        div.innerHTML = `
-                            <div><strong>🆔 Case ID:</strong>
-                                <a href="https://portal.mdr.sophos.com/soc/cases/${item.region_coded_id}"
-                                   target="_blank"
-                                   style="color:#58a6ff; text-decoration: underline;">
-                                   ${item.region_coded_id}
-                                </a>
-                            </div>
-                            <div><strong>📝 Note:</strong> ${item.notes}</div>`;
-                        resultContainer.appendChild(div);
-                        count++;
-                    }
-                }
+        const kw1 = k1.toLowerCase();
+        const kw2 = k2.toLowerCase();
+        const sanitize = str => str.replace(/[^0-9a-z]/gi, '').toLowerCase();
+
+        const both = [], only1 = [], only2 = [];
+
+        data.data.forEach(item => {
+            if (item.notes && item.region_coded_id) {
+                const note = sanitize(item.notes);
+                const has1 = kw1 && note.includes(sanitize(kw1));
+                const has2 = kw2 && note.includes(sanitize(kw2));
+                if (has1 && has2) both.push(item);
+                else if (has1) only1.push(item);
+                else if (has2) only2.push(item);
+            }
+        });
+
+        const renderBlock = (list, matchText) => {
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.style.marginBottom = '12px';
+                div.style.paddingBottom = '10px';
+                div.style.borderBottom = '1px solid #30363d';
+                div.innerHTML = `
+                    <div><strong>🆔 Case ID:</strong>
+                        <a href="https://portal.mdr.sophos.com/soc/cases/${item.region_coded_id}"
+                           target="_blank"
+                           style="color:#58a6ff; text-decoration: underline;">
+                           ${item.region_coded_id}
+                        </a>
+                    </div>
+                    <div><strong>📝 Note:</strong> ${item.notes}</div>
+                    <div style="color:#2ea043; font-weight:bold;">✅ Match for ${matchText}</div>`;
+                resultContainer.appendChild(div);
             });
-            const summary = document.createElement('div');
-            summary.style.color = '#2ea043';
-            summary.style.fontWeight = 'bold';
-            summary.style.marginTop = '10px';
-            summary.textContent = count
-                ? `✅ ${count} match(es) for "${keyword}"`
-                : `❌ No matches for "${keyword}"`;
-            resultContainer.appendChild(summary);
+        };
+
+        renderBlock(both, `"${k1}" and "${k2}"`);
+        renderBlock(only1, `"${k1}"`);
+        renderBlock(only2, `"${k2}"`);
+
+        if (!both.length && !only1.length && !only2.length) {
+            const div = document.createElement('div');
+            div.style.color = 'red';
+            div.style.fontWeight = 'bold';
+            div.textContent = '❌ No matches for provided keyword(s)';
+            resultContainer.appendChild(div);
         }
     }
 
