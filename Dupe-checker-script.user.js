@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Dupe Checker Darkbytes Pro 
+// @name         Dupe Checker Darkbytes Pro
 // @namespace    127.0.0.1
-// @version      4.0
+// @version      4.2
 // @description  Dual keyword search with priority results, UI
 // @author       SK, Rohith
 // @match        https://portal.mdr.sophos.com/soc/cases/*
@@ -13,21 +13,39 @@
 
     const style = document.createElement('style');
     style.textContent = `
-        @keyframes cyberSpin {
-            0% { transform: rotate(0deg); border-top-color: #00ffc3; }
-            25% { border-top-color: #00e0ff; }
-            50% { border-top-color: #8e44ad; }
-            75% { border-top-color: #ff0080; }
-            100% { transform: rotate(360deg); border-top-color: #00ffc3; }
-        }
+        /* CYBERPUNK GLOWING CUBE LOADER */
         .loader {
-            border: 4px solid #21262d;
-            border-top: 4px solid #00ffc3;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            animation: cyberSpin 1.2s linear infinite;
+            width: 40px;
+            height: 40px;
             margin: 20px auto;
+            position: relative;
+            box-sizing: border-box;
+            transform: rotate(45deg);
+        }
+
+        .loader::before, .loader::after {
+            content: '';
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 3px solid transparent;
+            border-bottom-color: #00ffc3;
+            border-top-color: #8e44ad;
+            animation: cyberCube 1s linear infinite;
+            border-radius: 4px;
+            box-shadow: 0 0 10px #00ffc3, 0 0 20px #8e44ad;
+        }
+
+        .loader::after {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes cyberCube {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     `;
     document.head.appendChild(style);
@@ -171,7 +189,7 @@
         const keywordInput1 = document.createElement('input');
         keywordInput1.placeholder = '🔑 Keyword 1 (e.g. src IP)';
         const keywordInput2 = document.createElement('input');
-        keywordInput2.placeholder = '🔑 Keyword 2 (e.g. dst IP)';
+        keywordInput2.placeholder = '🔑 Keyword 2 (optional)';
         [keywordInput1, keywordInput2].forEach(input => {
             Object.assign(input.style, {
                 width: '100%',
